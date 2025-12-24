@@ -26,6 +26,11 @@ While the community currently builds great off-chain tools (killboards, maps, BO
 - Localnet testing (sui-test-validator)
 - TypeScript for interaction scripts
 
+### Prerequisites
+
+- Sui CLI must be installed
+- You'll likely need a Sui wallet configured
+
 ### How to run (localnet)
 
 1. Start localnet:
@@ -37,6 +42,7 @@ While the community currently builds great off-chain tools (killboards, maps, BO
    ```bash
    sui client switch --env localnet
    sui client faucet
+   sui client gas
    ```
 
 3. Build & deploy:
