@@ -22,26 +22,26 @@ Created as preparation for the upcoming Sui migration and fully programmable Sma
 Imagine: You're mining resources and your SSUs sort everything automatically! 🎯
 
 ### The Problem:
-- In EVE Frontier, you collect many different resources
+- In EVE Frontier, you collect many different resources (Common Ore, Carbonaceous Ore, Metal-rich Ore, etc.)
 - SSUs are like storage boxes, but they don't sort automatically
 - You have to manually move everything around
 
 ### The Solution: Automatic Resource Sorting! ⚡
 
 1. **Input-SSU** (accepts everything): Your collection station for all resources
-2. **Carbon-SSU** (Carbonaceous Ore only): Special storage for coal
+2. **Carbon-SSU** (Carbonaceous Ore only): Special storage for Carbonaceous Ore
 
-**When you put Carbon in the Input-SSU:**
-- ✅ Automatic Detection: "That's Carbon!"
-- ✅ Proximity Check: Are the SSUs "close" enough?
+**When you put Carbonaceous Ore in the Input-SSU:**
+- ✅ Automatic Detection: "That's Carbonaceous Ore!"
+- ✅ Proximity Check: Are the SSUs "close" enough? (same location hash)
 - ✅ Space Check: Does the Carbon-SSU have enough space?
-- ✅ Automatic Transfer: Carbon moves to the Carbon-SSU!
+- ✅ Automatic Transfer: Carbonaceous Ore moves to the Carbon-SSU!
 
 **Example Scenario:**
 ```
-Input-SSU: [Iron, Carbon, Copper, Carbon, Gold]
-           ↓ (Carbon is automatically detected)
-Carbon-SSU: [Carbon, Carbon]
+Input-SSU: [Common Ore, Carbonaceous Ore, Metal-rich Ore, Carbonaceous Ore]
+           ↓ (Carbonaceous Ore is automatically detected)
+Carbon-SSU: [Carbonaceous Ore, Carbonaceous Ore]
 ```
 
 This is **real On-Chain Automation** – programmed in Sui Move! 🤖
@@ -68,7 +68,7 @@ brew install sui
 **Verify:**
 ```bash
 sui --version
-# Should show something like "sui 1.27.0"
+# Should show something like "sui 1.62.0" or higher (as of December 2025)
 ```
 
 > 💡 **Tip:** Sui CLI is like a toolbox for blockchain development. You can deploy and test smart contracts with it.
@@ -211,18 +211,29 @@ sui client call \
 - `2` = SSU Type (2 = Carbon-SSU)
 - `[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]` = Location Hash (32 bytes, simulates position)
 - `1000` = Maximum capacity
-- `0x0` = **No partner** (special CLI trick!)
+- `0x0` = **No partner SSU** (special address meaning "none" - required for CLI compatibility)
 
-**Find the Object ID:**
+**How to find your SSU's Object ID:**
+
+After running the command, look for this section in the output:
+
 ```
+Transaction Digest: ...
+...
 Created Objects:
   ┌──
-  │ ObjectID: 0xdef789...ghi012
-  │ ...
+  │ ObjectID: 0x5c3aba17f1e95110a5cf09c015e185e5f50431fa81a562327e07c79f15482ba2
+  │ Owner: Shared( 6 )
+  │ ObjectType: 0xf346...::ssu_sorter::StorageUnit
+  │ Version: 6
+  │ Digest: FVuzVsCRM9fh5q3f3zeio1KwayycS1hV7vgrT8N5VYvX
   └──
 ```
 
-> 📝 **Note:** `0xdef789...ghi012` = Your Carbon-SSU ID
+**→ Copy the ObjectID** (the long 0x... string starting with "0x") – this is your Carbon-SSU's unique address!
+
+> 📝 **Important:** Save this ID! You'll need it in the next steps.
+> 📝 **Note:** `0x5c3aba17f1e95110a5cf09c015e185e5f50431fa81a562327e07c79f15482ba2` = Your Carbon-SSU ID
 
 ### Step 2: Create Input-SSU (with Partner!)
 
@@ -237,25 +248,36 @@ sui client call \
     1 \
     "[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]" \
     1000 \
-    0xdef789...ghi012 \
+    0x5c3aba17f1e95110a5cf09c015e185e5f50431fa81a562327e07c79f15482ba2 \
   --gas-budget 10000000
 ```
 
 **Parameters:**
 - `1` = SSU Type (1 = Input-SSU)
 - Same Location Hash (must match for "proximity")
-- `0xdef789...ghi012` = **Partner ID** (your Carbon-SSU!)
+- `0x5c3aba17f1e95110a5cf09c015e185e5f50431fa81a562327e07c79f15482ba2` = **Partner ID** (your Carbon-SSU!)
 
-**Find the Object ID:**
+**How to find your SSU's Object ID:**
+
+After running the command, look for this section in the output:
+
 ```
+Transaction Digest: ...
+...
 Created Objects:
   ┌──
-  │ ObjectID: 0xjkl345...mno678
-  │ ...
+  │ ObjectID: 0x8f7c2b91e4a60327d5f19c8b2a1e45f6a9b3c8d7e1f2a4b5c6d7e8f9a0b1c2
+  │ Owner: Shared( 7 )
+  │ ObjectType: 0xf346...::ssu_sorter::StorageUnit
+  │ Version: 7
+  │ Digest: A1B2C3D4E5F6G7H8I9J0K1L2M3N4O5P6Q7R8S9T0U1V2W3X4Y5Z6A7B8
   └──
 ```
 
-> 📝 **Note:** `0xjkl345...mno678` = Your Input-SSU ID
+**→ Copy the ObjectID** (the long 0x... string starting with "0x") – this is your Input-SSU's unique address!
+
+> 📝 **Important:** Save this ID too! You'll need both IDs for the final test.
+> 📝 **Note:** `0x8f7c2b91e4a60327d5f19c8b2a1e45f6a9b3c8d7e1f2a4b5c6d7e8f9a0b1c2` = Your Input-SSU ID
 
 ### Step 3: Deposit Carbon
 
@@ -267,18 +289,20 @@ sui client call \
   --module ssu_sorter \
   --function deposit_item \
   --args \
-    0xjkl345...mno678 \
-    0xdef789...ghi012 \
+    0x8f7c2b91e4a60327d5f19c8b2a1e45f6a9b3c8d7e1f2a4b5c6d7e8f9a0b1c2 \
+    0x5c3aba17f1e95110a5cf09c015e185e5f50431fa81a562327e07c79f15482ba2 \
     42 \
     500 \
   --gas-budget 10000000
 ```
 
 **Parameters:**
-- `0xjkl345...mno678` = Input-SSU ID
-- `0xdef789...ghi012` = Carbon-SSU ID
+- `0x8f7c2b91e4a60327d5f19c8b2a1e45f6a9b3c8d7e1f2a4b5c6d7e8f9a0b1c2` = **Input-SSU ID** (from Step 2)
+- `0x5c3aba17f1e95110a5cf09c015e185e5f50431fa81a562327e07c79f15482ba2` = **Carbon-SSU ID** (from Step 1)
 - `42` = Item Type ID for Carbonaceous Ore
 - `500` = Quantity
+
+**Replace the IDs above with your actual SSU IDs from the previous steps!** 🔄
 
 ### Step 4: Check Status
 
@@ -290,7 +314,7 @@ sui client call \
   --package 0xabc123...def456 \
   --module ssu_sorter \
   --function get_info \
-  --args 0xjkl345...mno678
+  --args 0x8f7c2b91e4a60327d5f19c8b2a1e45f6a9b3c8d7e1f2a4b5c6d7e8f9a0b1c2
 ```
 
 **Carbon-SSU:**
@@ -299,7 +323,7 @@ sui client call \
   --package 0xabc123...def456 \
   --module ssu_sorter \
   --function get_info \
-  --args 0xdef789...ghi012
+  --args 0x5c3aba17f1e95110a5cf09c015e185e5f50431fa81a562327e07c79f15482ba2
 ```
 
 ---
@@ -307,30 +331,20 @@ sui client call \
 ## 🎉 Expected Results
 
 ### Before Deposit:
-- **Input-SSU:** `used_capacity: 0`
-- **Carbon-SSU:** `used_capacity: 0`
+- **Input-SSU:** `used_capacity: 0` (empty)
+- **Carbon-SSU:** `used_capacity: 0` (empty)
 
 ### After Deposit:
-- **Input-SSU:** `used_capacity: 0` ✅ (Carbon was transferred!)
-- **Carbon-SSU:** `used_capacity: 500` ✅ (Carbon arrived!)
+- **Input-SSU:** `used_capacity: 0` ✅ **(Carbonaceous Ore was automatically transferred away!)**
+- **Carbon-SSU:** `used_capacity: 500` ✅ **(Carbonaceous Ore arrived automatically!)**
 
-### Check Events:
+**🎯 The Proof:** The automatic transfer worked because the Carbonaceous Ore moved from Input-SSU to Carbon-SSU automatically! This is proven by the change in `used_capacity` values.
 
-```bash
-sui client query-events --event ssu_sorter::ssu_sorter::CarbonTransferred
-```
-
-You'll see an event like:
-```
-{
-  "from_ssu_id": "0xjkl345...mno678",
-  "to_ssu_id": "0xdef789...ghi012",
-  "quantity": 500,
-  "timestamp_ms": 1234567890
-}
-```
+**Note:** The `get_info` function shows the most important info (`used_capacity`). The items list might not be displayed in detail, but the capacity change proves the transfer worked!
 
 > 🎊 **Congratulations!** You just performed your first automatic On-Chain transfer!
+>
+> **The automatic transfer is proven by the change in used_capacity – no separate event query needed on localnet.**
 
 ---
 
